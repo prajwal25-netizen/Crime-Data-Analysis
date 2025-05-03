@@ -1,0 +1,149 @@
+
+---
+title: "Crime Data Analysis"
+author: "Prajwal KC"
+output: html_document
+---
+
+## Introduction
+
+Crime data analysis is essential for identifying patterns, trends, and areas requiring law enforcement attention. This report explores a publicly available U.S. crime dataset sourced from Kaggle. The goal is to analyze crime trends over time, examine state-wise distributions, and conduct an in-depth analysis of Los Angeles, California.
+
+By understanding how crimes vary by time, region, and demographics, data analysts can provide valuable insights for crime prevention, policy planning, and public safety improvements.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Dataset Description
+
+The dataset includes nationwide crime reports across several years and states in the U.S. Key features include:
+- `Year`: The year the crime was reported
+- `State` and `City`: The location of the crime
+- `Crime Type`, `Weapon`, `Crime Solved`: Information about the crime event
+- `Victim Age`, `Victim Sex`, `Victim Race`, `Relationship`: Victim demographics
+
+The dataset contains thousands of observations, offering sufficient depth for statistical and trend analysis.
+
+## Load the Dataset
+
+```{r load-data}
+library(readr)
+US_Crime_DataSet_csv <- read_csv("US_Crime_DataSet.csv.zip")
+View(US_Crime_DataSet_csv)
+crimedata <- US_Crime_DataSet_csv
+```
+
+## Crime Types Overview
+
+```{r crime-types}
+unique(crimedata$`Crime Type`)
+table(crimedata$`Crime Type`)
+```
+
+## Crime Trends Over Time
+
+```{r crime-trends}
+total_crime <- crimedata %>%
+  group_by(Year) %>%
+  summarize(count = n())
+
+ggplot(total_crime, aes(x = Year, y = count)) +
+  geom_line(color = "steelblue", linewidth= 1) +
+  scale_x_continuous(breaks = seq(min(total_crime$Year), max(total_crime$Year), by = 5)) +
+  labs(
+    x = "Year",
+    y = "Total Number of Crimes",
+    title = "Crime Trends Over Time")+
+      theme_minimal()
+```
+
+## Statewise Crime Distribution
+
+```{r statewise-crime}
+statewise <- crimedata %>%
+  group_by(State) %>%
+  summarize(number = n())
+
+ggplot(statewise, aes(x = reorder(State, -number), y = number)) +
+  geom_col(fill = "coral") +
+  coord_flip() +
+  labs(title = "Total Crimes by State",
+       y="Number of Crimes",
+       x="States")+
+         theme_minimal()
+```
+
+## Los Angeles Crime Focus
+
+```{r la-analysis}
+LA <- crimedata %>% filter(City == "Los Angeles")
+
+# Insight: This shows how many crimes were solved versus unsolved in LA.
+LA %>% group_by(`Crime Solved`) %>% summarize(count = n())
+
+# Insight: This shows the sex of victims.
+LA %>% group_by(`Victim Sex`) %>% summarize(count = n())
+
+#Insight: This shows the race of victims.
+LA %>% group_by(`Victim Race`) %>% summarize(count = n())
+```
+
+## Victim Age Group Distribution
+
+```{r age-group}
+agegroup <- LA %>%
+  mutate(agegroup = case_when(
+    `Victim Age` < 5 ~ "Under 5",
+    `Victim Age` >= 5 & `Victim Age` < 18 ~ "5-17",
+    `Victim Age` >= 18 & `Victim Age` < 50 ~ "18-49",
+    `Victim Age` >= 50 ~ "50+"
+  ))
+
+agegroup %>%
+  group_by(agegroup) %>%
+  summarize(count = n())
+```
+
+## Weapons involved in LA crimes
+
+```{r weapons-used}
+weapon <- c("Handgun", "Knife", "Blunt Object", "Firearm", "Rifle", "Shotgun")
+
+ggplot(data = subset(LA, Weapon %in% weapon), aes(x = Weapon)) +
+  geom_bar(fill = "steelblue") +
+  scale_y_continuous(breaks = seq(0, 25000, by = 5000)) +
+  labs(title = "Weapons Used in Crimes In LA",
+       x="Total Number of times",
+       y="Weapons")+
+         theme_minimal()
+```
+
+## Linear Regression on Total Crimes
+
+```{r regression-total-crime}
+linear <- lm(count ~ Year, data = total_crime)
+summary(linear)
+total_crime$linearpred <- predict(linear, newdata = total_crime)
+
+ggplot(total_crime, aes(x = Year, y = count)) +
+  geom_line(color = "blue") +
+  geom_line(aes(y = linearpred), color = "red", linetype = "dashed") +
+  labs(title = "Linear Regression on Total Crimes")
+
+```
+
+## Conclusion
+
+This analysis uncovered several valuable insights from the U.S. crime dataset:
+
+- Crimes have shown varying trends over the years, with some periods of increase or decline.
+- Certain states contribute disproportionately to national crime totals.
+- Los Angeles, as a major urban area, shows distinct crime patterns — including common weapons used and age demographics.
+- Linear regression analysis shows time-based trends which could help in forecasting and prevention strategies.
+
+Overall, this type of analysis can support policymakers, safety organizations, and researchers in making data-informed decisions. into how crime patterns vary by time, location, and demographic factors. The linear regression model suggests trends that can be further explored for predictive insights. The city-specific breakdown helps focus policy and safety measures.
